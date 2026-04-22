@@ -1,4 +1,0 @@
-interface:
-  display_name: "统计数据分析方法 R Report"
-  short_description: "Theme-specific R workflow for 统计数据分析方法 reports"
-  default_prompt: "Use $r-stat-course-report for 统计数据分析方法 course reports in R with current financial or securities data, theme-specific analysis, recent literature, and runnable local bundles."
