@@ -5,6 +5,39 @@ description: Use when creating publication-quality statistical figures for top-t
 
 # Scientific Plotting Skill
 
+## Language Rule (MANDATORY)
+
+**Always respond in the user's language.** If the user writes in Chinese, reply in Chinese. If in English, reply in English. This applies to all user-facing text: questions, explanations, confirmations, and error messages.
+
+## Mandatory Pre-Export Format Query
+
+**BEFORE generating any figure code, you MUST ask the user the following questions. Use the user's language when phrasing these questions.**
+
+### Question 1: Output Format
+
+Ask the user: "What format would you like to export the figure in?"
+- PNG (raster, suitable for reports/presentations)
+- JPG (raster, suitable for reports/presentations)
+- SVG (vector, suitable for web/editable graphics)
+- PDF (vector, suitable for journal submission/print)
+- Other format
+
+### Question 2: Quality Parameters (for raster formats only)
+
+If user selects **PNG** or **JPG**:
+
+Ask: "How would you like to set the quality parameters for the raster format?"
+- **Use skill default parameters** (recommended): PNG at DPI=600, JPG at DPI=300
+- Custom parameters: specify desired DPI and/or quality settings
+
+**Default parameters for raster formats:**
+| Format | DPI | Notes |
+|--------|-----|-------|
+| PNG | 600 | Suitable for journal submission quality |
+| JPG | 300 | Suitable for general reports and presentations |
+
+**Do NOT proceed to generate any code until these questions are answered.**
+
 ## Core Rule
 
 **Every figure must start with `setup_journal_style()`**. This function is mandatory and must be called before any plotting code. It locks all rcParams to journal standards automatically.
@@ -428,8 +461,9 @@ fig, ax = plt.subplots()
 # ax.set_ylabel('...')
 # add_metric_text(ax, {...})
 
-# Step 4: Export
-fig.savefig('<fig_number>.pdf', dpi=600, bbox_inches='tight')
+# Step 4: Export (use format and DPI from user's pre-export query)
+# Example for PNG: fig.savefig('<fig_number>.png', format='png', dpi=600, ...)
+# Example for PDF: fig.savefig('<fig_number>.pdf', format='pdf', dpi=600, ...)
 plt.show()
 ```
 
@@ -473,7 +507,7 @@ add_metric_text(ax, {'Silhouette': 0.72, 'Consistency': 0.89},
                 loc='upper right')
 
 ax.legend(loc='upper left', frameon=False)
-fig.savefig('fig2_4_cluster_envelope.pdf', dpi=600, bbox_inches='tight')
+# Export: use format and DPI from user's pre-export query
 plt.show()
 ```
 
@@ -514,7 +548,7 @@ ax.set_ylabel('Load (MW)')
 ax.legend(loc='upper left', frameon=False)
 fig.autofmt_xdate(rotation=15)
 
-fig.savefig('fig3_1_qgam_prediction.pdf', dpi=600, bbox_inches='tight')
+# Export: use format and DPI from user's pre-export query
 plt.show()
 ```
 
@@ -571,7 +605,7 @@ ax_left.annotate('QGAM: better uncertainty\nXGBoost: better point estimate',
                  ha='center', fontsize=7, va='top',
                  bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
 
-fig.savefig('fig3_2_model_comparison.pdf', dpi=600, bbox_inches='tight')
+# Export: use format and DPI from user's pre-export query
 plt.show()
 ```
 
@@ -590,20 +624,25 @@ for ax in axes:
     ax.set_xlabel(ax.get_xlabel())
     ax.set_ylabel(ax.get_ylabel())
 
-fig.savefig('fig_multipanel.pdf', dpi=600, bbox_inches='tight')
+# Export: use format and DPI from user's pre-export query
 plt.show()
 ```
 
 ## Export Settings
 
+**Use the format and quality parameters specified by the user in the pre-export query.** The format is no longer restricted to PDF.
+
 ```python
-# Vector format for publication
+# For raster formats (PNG, JPG): use user-specified DPI
+fig.savefig('figure.png', format='png', dpi=600,
+            bbox_inches='tight', facecolor='white')
+fig.savefig('figure.jpg', format='jpg', dpi=300,
+            bbox_inches='tight', quality=95)
+
+# For vector formats (PDF, SVG): use DPI=600 for compatibility
 fig.savefig('figure.pdf', format='pdf', dpi=600,
             bbox_inches='tight', pad_inches=0.05)
-
-# PNG for presentations / reports
-fig.savefig('figure.png', format='png', dpi=300,
-            bbox_inches='tight', facecolor='white')
+fig.savefig('figure.svg', format='svg', bbox_inches='tight')
 ```
 
 ## Axis Tick Formatting Rules
@@ -710,7 +749,7 @@ Verify before declaring any figure complete:
 - [ ] Axis labels: include units, no bold weight
 - [ ] Legend: frameless; **always outside figure, right side** (`bbox_to_anchor=(1.02, 1)`)
 - [ ] Subplot labels: A/B/C/D, bold, positioned outside top-left
-- [ ] Export: PDF at 600 DPI, `bbox_inches='tight'`
+- [ ] Export: format and DPI as specified by user, `bbox_inches='tight'`
 - [ ] Minus signs: render correctly for chosen `font` and `lang`
 - [ ] **No annotations/marks covering data, axes, or title**
 - [ ] Figure size matches target journal column width
