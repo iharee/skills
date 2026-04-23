@@ -686,54 +686,67 @@ if len(ax.get_xticklabels()[0].get_text()) > 15:
 
 ## Legend Positioning Rule
 
-**图例必须放置于图形外部，紧邻右侧。禁止使用 `loc='best'` 或其他导致图例落在图像内部的定位。**
+Legend position should be chosen flexibly based on plot layout and data distribution, prioritizing positions that do not cover data.
+
+**Decision flow:**
+1. Evaluate whether the plot interior has sufficient blank space
+2. If interior space is available, place legend inside (`upper right`, `upper left`)
+3. If data is dense or space is limited, move legend outside (`bbox_to_anchor`)
+4. For many legend items, use `ncol` for multi-column layout or reduce font size
 
 ```python
-# ✅ 正确：图例在图形右侧外部
+# ✅ Case 1: Space on right side → legend outside right
 ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1))
 
-# ❌ 禁止：图例在图形内部
-ax.legend(loc='best')
-ax.legend(loc='upper right')  # 会遮挡数据
-```
+# ✅ Case 2: Space above → legend at top center
+ax.legend(loc='upper center', ncol=3)
 
-**当图例项过多导致横向溢出时**，使用 `ncol` 分列或减小字体：
-```python
+# ✅ Case 3: Upper left is blank → legend at upper left
+ax.legend(loc='upper left')
+
+# ✅ Case 4: Many items → multi-column
 ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), ncol=2, fontsize=7)
 ```
+
+**Smart defaults by plot type:**
+- **Distribution/density plots (KDE, histogram, violin)**: Upper right corner is typically blank → prefer `loc='upper right'`
+- **Time series with data near edges**: Consider `loc='upper left'` or external placement
+- **Bar charts**: Often space above bars → `loc='upper center'` with `ncol`
+
+**Using `loc='best'`:** When positioning is ambiguous and cannot be confidently determined, `loc='best'` is acceptable. The user feedback step will catch any poor placements.
 
 ---
 
 ## Annotation & Mark Positioning Rule
 
-**不要用标记（文本、箭头等）遮挡图形、坐标轴或标题。**
+**Do not use marks (text, arrows, etc.) to cover the plot, axes, or title.**
 
-**决策流程：**
+**Decision flow:**
 ```
-添加标记前 → 检查是否必要 → 是否有空间 → 不会遮挡任何内容 → 才可添加
+Before adding mark → Check necessity → Check space → Won't cover anything → Then add
 ```
 
-**原则：**
-- 如非必要，不添加标记
-- 标记应在图形边缘，不在数据密集区域
-- 箭头仅用于指向数据特征，禁止穿过数据点
-- 文本标签仅在无其他方式传达信息时使用
+**Principles:**
+- Avoid marks unless necessary
+- Marks should be at plot edges, not in data-dense regions
+- Arrows only for pointing to data features; must not cross data points
+- Text labels only when no other way to convey information
 
 ```python
-# ✅ 正确：标记在空白区域，不遮挡数据
+# ✅ Correct: mark in blank area, not covering data
 ax.annotate('peak', xy=(10, 5), xytext=(12, 5.5),
             arrowprops=dict(arrowstyle='->', color='gray', lw=0.5))
 
-# ❌ 禁止：标记遮挡坐标轴、标题或数据密集区
-ax.annotate('peak', xy=(0.1, 0.95), xycoords='axes fraction')  # 遮挡标题
-ax.text(50, 2.5, 'anomaly', ha='center')  # 落在数据点中间
+# ❌ Forbidden: mark covering axes, title, or data-dense region
+ax.annotate('peak', xy=(0.1, 0.95), xycoords='axes fraction')  # covers title
+ax.text(50, 2.5, 'anomaly', ha='center')  # in the middle of data points
 ```
 
-**检查清单：**
-- [ ] 标记不在坐标轴刻度线附近
-- [ ] 标记不在标题或轴标签附近
-- [ ] 标记不在数据最密集的区间
-- [ ] 箭头不穿过任何数据点
+**Checklist:**
+- [ ] Mark not near axis tick marks
+- [ ] Mark not near title or axis labels
+- [ ] Mark not in the most data-dense region
+- [ ] Arrow does not cross any data points
 
 ---
 
@@ -747,7 +760,7 @@ Verify before declaring any figure complete:
 - [ ] Colors: distinguishable in grayscale when `color_mode='color'`
 - [ ] Error bands: type explicitly labeled (SD / SEM / 95% CI)
 - [ ] Axis labels: include units, no bold weight
-- [ ] Legend: frameless; **always outside figure, right side** (`bbox_to_anchor=(1.02, 1)`)
+- [ ] Legend: frameless; **positioned to not cover data** (outside or in blank area)
 - [ ] Subplot labels: A/B/C/D, bold, positioned outside top-left
 - [ ] Export: format and DPI as specified by user, `bbox_inches='tight'`
 - [ ] Minus signs: render correctly for chosen `font` and `lang`
@@ -755,6 +768,49 @@ Verify before declaring any figure complete:
 - [ ] Figure size matches target journal column width
 - [ ] **Large time series: tick labels sparse, not every point**
 - [ ] **Long axis labels (15+ chars): reduced font size (6–7 pt)**
+
+## Post-Generation User Feedback Flow
+
+When the user requests multiple figures, follow this workflow:
+
+### Step 1: Generate All Figures
+
+Generate and export all figures as requested. Ensure each figure passes the full Pre-Export Checklist.
+
+### Step 2: Present Results
+
+Display the completed figures to the user.
+
+### Step 3: Ask for Adjustments
+
+**Must ask the user (in their language):**
+
+> "All figures have been generated. Are you satisfied with the display of each figure? If any figure needs individual adjustments (such as colors, annotation positions, legend, font size, axis ranges, etc.), please let me know which specific figures need changes and what adjustments are needed."
+
+### Step 4: Refine Based on Feedback
+
+If the user identifies figures needing adjustment:
+
+1. **Process one by one**: Modify code for each figure the user specified
+2. **Targeted changes**: Only adjust the issues mentioned; do not change other parts
+3. **Re-present**: Show the modified figure and confirm the adjustment effect
+4. **Loop**: Repeat Step 3 and Step 4 until the user is satisfied
+
+### Flowchart
+
+```dot
+digraph feedback_flow {
+    "Generate all figures" -> "Present results";
+    "Present results" -> "Ask if user is satisfied";
+    "Ask if user is satisfied" -> "Adjustments needed?";
+    "Adjustments needed?" -> "Refine corresponding figures" [label="Yes"];
+    "Adjustments needed?" -> "Done" [label="No"];
+    "Refine corresponding figures" -> "Re-present";
+    "Re-present" -> "Ask if user is satisfied";
+}
+```
+
+---
 
 ## Other Packages
 
@@ -774,11 +830,10 @@ arviz plots inherit matplotlib rcParams automatically. Call `setup_journal_style
 | Too many colors | Use monochrome or 2–3 colors maximum |
 | Missing uncertainty visualization | Always include SD, SEM, or CI bands |
 | Grid lines too prominent | Keep alpha ≤ 0.4, linewidth ≤ 0.3 |
-| Legend overlapping data | Place outside with `bbox_to_anchor=(1.02, 1)` |
+| Legend overlapping data | Position flexibly based on available space; use `bbox_to_anchor` when needed |
 | Inconsistent axis limits across panels | Set identical `xlim` / `ylim` for comparison plots |
 | Using `text.usetex=True` without LaTeX installed | Fallback to `font='cm'` with mathtext |
 | Chinese minus signs as blocks | `axes.unicode_minus=False` (set automatically) |
 | **Dense time series with all labels** | Use `set_xticks(data[::step])` — never show every point |
 | **Full datetime strings like "2024-10-11 08:00"** | Truncate to short form or use `labelsize=6` |
-| **Legend inside plot covering data** | Always `bbox_to_anchor=(1.02, 1)`, never `loc='best'` |
 | **Annotations covering axes/title/data** | Check position before adding; prefer edge placement |
